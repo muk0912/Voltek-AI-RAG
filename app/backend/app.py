@@ -356,22 +356,26 @@ async def upload(auth_claims: dict[str, Any]):
 
     user_oid = auth_claims["oid"]
     file = request_files.getlist("file")[0]
+    group_name = "Voltek RAG Team"
+    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+    groups = auth_helper.get_group_id(group_name)
+    group_id = groups[0]["id"]
     user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
-    user_directory_client = user_blob_container_client.get_directory_client(user_oid)
+    group_directory_client = user_blob_container_client.get_directory_client(group_id)
     try:
-        await user_directory_client.get_directory_properties()
+        await group_directory_client.get_directory_properties()
     except ResourceNotFoundError:
-        current_app.logger.info("Creating directory for user %s", user_oid)
-        await user_directory_client.create_directory()
-    await user_directory_client.set_access_control(owner=user_oid)
-    file_client = user_directory_client.get_file_client(file.filename)
+        current_app.logger.info("Creating directory for group %s", group_id)
+        await group_directory_client.create_directory()
+    await group_directory_client.set_access_control(group=group_id)
+    file_client = group_directory_client.get_file_client(file.filename)
     file_io = file
     file_io.name = file.filename
     file_io = io.BufferedReader(file_io)
     await file_client.upload_data(file_io, overwrite=True, metadata={"UploadedBy": user_oid})
     file_io.seek(0)
     ingester: UploadUserFileStrategy = current_app.config[CONFIG_INGESTER]
-    await ingester.add_file(File(content=file_io, acls={"oids": [user_oid]}, url=file_client.url))
+    await ingester.add_file(File(content=file_io, acls={"oids": [user_oid], "groups" : [group_id]}, url=file_client.url))
     return jsonify({"message": "File uploaded successfully"}), 200
 
 

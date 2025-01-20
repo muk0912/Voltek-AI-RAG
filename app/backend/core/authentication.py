@@ -177,7 +177,38 @@ class AuthenticationHelper:
                 security_filter = f"({security_filter} or {global_documents_filter})"
 
         return security_filter
+    
+    def get_access_token(self):
+        # Acquire a token for the Microsoft Graph API
+        result = self.confidential_client.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
+        if "access_token" in result:
+            return result["access_token"]
+        else:
+            raise Exception(f"Failed to acquire token: {result.get('error_description')}")
+        
+    async def get_group_id(self, group_name: str) -> str:
+            access_token = self.get_access_token()
 
+            headers = {"Authorization": "Bearer " + access_token}
+            url = f"https://graph.microsoft.com/v1.0/groups?$filter=displayName eq '{group_name}'&$select=id,displayName"
+
+            async with aiohttp.ClientSession(headers=headers) as session:
+                resp_json = None
+                resp_status = None
+                async with session.get(url = url) as resp:
+                    resp_json = await resp.json()
+                    resp_status = resp.status
+                    if resp_status != 200:
+                        raise AuthError(error=json.dumps(resp_json), status_code=resp_status)
+                while resp_status == 200:
+                    groups = resp_json["value"]
+                    if groups:
+                        return groups  #Returns the list of dictionary access with key id and displayName
+                    else:
+                        return None  # Group not found
+                if resp_status != 200:
+                    raise AuthError(error=json.dumps(resp_json), status_code=resp_status)
+                
     @staticmethod
     async def list_groups(graph_resource_access_token: dict) -> list[str]:
         headers = {"Authorization": "Bearer " + graph_resource_access_token["access_token"]}
