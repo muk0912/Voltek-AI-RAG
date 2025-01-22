@@ -155,7 +155,7 @@ async def content_file(path: str, auth_claims: Dict[str, Any]):
             except ResourceNotFoundError:
                 try: 
                     auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
-                    groups = await auth_helper.get_group_id()
+                    groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
                     group_id = groups[0]["id"]
                     group_blob_container_client = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
                     group_directory_client: FileSystemClient = group_blob_container_client.get_directory_client(group_id)
