@@ -152,6 +152,7 @@ async def content_file(path: str, auth_claims: Dict[str, Any]):
                 user_directory_client: FileSystemClient = user_blob_container_client.get_directory_client(user_oid)
                 file_client = user_directory_client.get_file_client(path)
                 blob = await file_client.download_file()
+                current_app.logger.info("Path not found in user Blob container: %s", path)
             except ResourceNotFoundError:
                 try: 
                     auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
@@ -163,7 +164,7 @@ async def content_file(path: str, auth_claims: Dict[str, Any]):
                     blob = await file_client.download_file()
 
                 except ResourceNotFoundError:
-                    current_app.logger.exception("Path not found in DataLake: %s", path)
+                    current_app.logger.exception("Path not found in DataLake group container: %s", path)
                     abort(404)
         else:
             abort(404)
