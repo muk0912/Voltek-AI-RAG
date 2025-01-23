@@ -422,21 +422,26 @@ async def list_uploaded(auth_claims: dict[str, Any]):
     user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
     auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
     files = []
+    
     try:
-        groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
-        group_id = groups[0]["id"]
         all_user_paths = user_blob_container_client.get_paths(path=user_oid)
         async for path in all_user_paths:
             files.append(path.name.split("/", 1)[1])
-        all_group_paths = user_blob_container_client.get_paths(path=group_id)
-        async for path in all_group_paths:
-            files.append(path.name.split("/", 1)[1])
-            current_app.logger.info(f"Path: {files}")
-
-        
     except ResourceNotFoundError as error:
         if error.status_code != 404:
             current_app.logger.exception("Error listing uploaded files", error)
+
+    try:
+        groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
+        group_id = groups[0]["id"]
+        all_group_paths = user_blob_container_client.get_paths(path=group_id)
+        async for path in all_group_paths:
+            files.append(path.name.split("/", 1)[1])
+            # current_app.logger.info(f"Path: {files}")
+    except ResourceNotFoundError as error:
+        if error.status_code != 404:
+            current_app.logger.exception("Error listing uploaded files", error)
+
     return jsonify(files), 200
 
 
