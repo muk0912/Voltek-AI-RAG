@@ -152,6 +152,7 @@ async def content_file(path: str, auth_claims: Dict[str, Any]):
                 user_directory_client: FileSystemClient = user_blob_container_client.get_directory_client(user_oid)
                 file_client = user_directory_client.get_file_client(path)
                 blob = await file_client.download_file()
+                current_app.logger.info("Path not found in user Blob container: %s", path)
             except ResourceNotFoundError:
                 try: 
                     auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
@@ -163,7 +164,7 @@ async def content_file(path: str, auth_claims: Dict[str, Any]):
                     blob = await file_client.download_file()
 
                 except ResourceNotFoundError:
-                    current_app.logger.exception("Path not found in DataLake: %s", path)
+                    current_app.logger.exception("Path not found in DataLake group container: %s", path)
                     abort(404)
         else:
             abort(404)
@@ -396,10 +397,19 @@ async def delete_uploaded(auth_claims: dict[str, Any]):
     request_json = await request.get_json()
     filename = request_json.get("filename")
     user_oid = auth_claims["oid"]
-    user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
-    user_directory_client = user_blob_container_client.get_directory_client(user_oid)
-    file_client = user_directory_client.get_file_client(filename)
-    await file_client.delete_file()
+    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+    group_name = current_app.config[BASE_GROUP]
+    groups = await auth_helper.get_group_id(group_name)
+    group_id = groups[0]["id"]
+    blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
+    try: 
+        user_directory_client = blob_container_client.get_directory_client(user_oid)
+        file_client = user_directory_client.get_file_client(filename)
+        await file_client.delete_file()
+    except ResourceNotFoundError:
+        group_directory_client = blob_container_client.get_directory_client(group_id)
+        file_client = group_directory_client.get_file_client(filename)
+        await file_client.delete_file()
     ingester = current_app.config[CONFIG_INGESTER]
     await ingester.remove_file(filename, user_oid)
     return jsonify({"message": f"File {filename} deleted successfully"}), 200
@@ -412,20 +422,26 @@ async def list_uploaded(auth_claims: dict[str, Any]):
     user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
     auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
     files = []
+    
     try:
-        groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
-        group_id = groups[0]["id"]
         all_user_paths = user_blob_container_client.get_paths(path=user_oid)
         async for path in all_user_paths:
             files.append(path.name.split("/", 1)[1])
-        all_group_paths = user_blob_container_client.get_paths(path=group_id)
-        async for path in all_group_paths:
-            files.append(path.name.split("/", 1)[1])
-
-        
     except ResourceNotFoundError as error:
         if error.status_code != 404:
             current_app.logger.exception("Error listing uploaded files", error)
+
+    try:
+        groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
+        group_id = groups[0]["id"]
+        all_group_paths = user_blob_container_client.get_paths(path=group_id)
+        async for path in all_group_paths:
+            files.append(path.name.split("/", 1)[1])
+            # current_app.logger.info(f"Path: {files}")
+    except ResourceNotFoundError as error:
+        if error.status_code != 404:
+            current_app.logger.exception("Error listing uploaded files", error)
+
     return jsonify(files), 200
 
 
