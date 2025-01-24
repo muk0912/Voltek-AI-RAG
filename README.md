@@ -46,6 +46,7 @@ This template, the application code and configuration it contains, has been buil
 - [Clean up](#clean-up)
 - [Guidance](#guidance)
   - [Resources](#resources)
+- [TODO](#todo)
 
 ![Chat screen](docs/images/chatscreen.png)
 
@@ -286,3 +287,12 @@ so please use the support mechanisms described above, and we will do our best to
 ### Note
 
 >Note: The PDF documents used in this demo contain information generated using a language model (Azure OpenAI Service). The information contained in these documents is only for demonstration purposes and does not reflect the opinions or beliefs of Microsoft. Microsoft makes no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability or availability with respect to the information contained in this document. All rights reserved to Microsoft.
+
+## TODO
+
+1. The API has been updated to support semantic scholar integration. Go through the flow once to make sure it seems right and that there are no bugs remaining. Only the chat updated function is being used, not the ask function. Do not touch chat and readthenretrievesemantic.py file for now. Only the chatreadretrievereadsemantic.py file. 
+2. Add unit tests (after meeting ofc) for the updated UI
+3. Update the UI with latest messages and suggestions that are more relevant. Also disable the settings button if you are not admin (Ideally only us three)
+4. IMPORTANT FOR MEETING: Update UI such that if the response citation contains https or ends with .com, then treat it like an external link rather than an internal document. 
+5. Test if any bugs remain for the document upload, delete, and list functions. Also check if document is being pulled properly. Last I saw all of this was working, but you never know. 
+

@@ -17,13 +17,12 @@ class RetrieveThenReadApproach(Approach):
     (answer) with that prompt.
     """
 
-    # Updated system prompt and few-shot example:
+ # Updated system prompt and few-shot example:
     system_chat_template = (
         "You are an AI assistant for Voltek Battery Technologies, answering technical questions about anode materials, manufacturing processes, and performance optimization. "
         "Use only the provided sources (e.g., material specs, test reports, research papers). "
         "Always cite the source name in square brackets. Be concise and technical. "
         "If unsure, say 'This is not documented in our materials.' "
-        "Example:"
     )
 
     question = """
