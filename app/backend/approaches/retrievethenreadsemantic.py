@@ -20,30 +20,29 @@ class RetrieveThenReadSemanticApproach(Approach):
     (answer) with that prompt.
     """
 
+    # Updated system prompt and few-shot example:
     system_chat_template = (
-        "You are an intelligent chemistry assistant helping Nanoloy employees 3 "
-        + "Use 'you' to refer to the individual asking the questions even if they ask with 'I'. "
-        + "Answer the following question using only the data provided in the sources below. "
-        + "Each source has a name followed by colon and the actual information, always include the source name for each fact you use in the response. "
-        + "If you cannot answer using the sources below, say you don't know. Use below example to answer"
+        "You are an AI assistant for Voltek Battery Technologies, answering technical questions about anode materials, manufacturing processes, and performance optimization. "
+        "Use only the provided sources (e.g., material specs, test reports, research papers). "
+        "Always cite the source name in square brackets. Be concise and technical. "
+        "If unsure, say 'This is not documented in our materials.' "
+        "Example:"
     )
 
-    # shots/sample conversation
     question = """
-'What is the deductible for the employee plan for a visit to Overlake in Bellevue?'
+    'What doping level of phosphorus in graphite maximizes LIB anode capacity?'
 
-Sources:
-info1.txt: deductibles depend on whether you are in-network or out-of-network. In-network deductibles are $500 for employee and $1000 for family. Out-of-network deductibles are $1000 for employee and $2000 for family.
-info2.pdf: Overlake is in-network for the employee plan.
-info3.pdf: Overlake is the name of the area that includes a park and ride near Bellevue.
-info4.pdf: In-network institutions include Overlake, Swedish and others in the region
+    Sources:
+    Anode_Study_2023.pdf: 5% P-doped graphite achieved 420 mAh/g capacity, but >7% caused structural instability.
+    Doping_Report_2024.docx: Optimal P-doping is 4-6% for balancing capacity and cycle life.
+    
+    External Sources:
+    Nitrogen and Phosphorus Codoped Porous Carbon Framework as Anode Material for High Rate Lithium-Ion Batteries., 2018:
+        Slow kinetics and low specific capacity of graphite anode significantly limit its applications in the rapidly developing lithium-ion battery (LIB) markets. Herein, we report a carbon framework anode with ultrafast rate and cycling stability for LIBs by nitrogen and phosphorus doping. The electrode structure is constructed of a 3D framework built from 2D heteroatom-doped graphene layers via pyrolysis of self-assembled supramolecular aggregates. The synergistic effect from the nanostructured 3D framework and chemical doping (i.e., N- and P-doping) enables fast kinetics in charge storage and transport. A high reversible capacity of 946 mAh g-1 is delivered at a current rate of 0.5 A g-1, and excellent rate capability (e.g., a capacity of 595 mAh g-1 at 10 A g-1) of the electrode is shown. Moreover, a moderate surface area from the 3D porous structure contributes to a relatively high initial Coulombic efficiency of 74%, compared to other graphene-based anode materials. The electrode also demonstrates excellent cycling stability at a current rate of 2 A g-1 for 2000 cycles. The synthetic strategy proposed here is highly efficient and green, which can provide guidance for large-scale controllable fabrication of carbon-based anode materials.
+        Link : [https://www.semanticscholar.org/paper/e3c406404e2229b19785810f41743eb0df4e855f]
+    """
 
-External Sources:
-title, year: url
-    abstract: 
-"""
-    answer = "In-network deductibles are $500 for employee and $1000 for family [info1.txt] and Overlake is in-network for the employee plan [info2.pdf][info4.pdf]."
-
+    answer = "Phosphorus doping at 5% maximizes capacity (420 mAh/g) while maintaining structural stability [Anode_Study_2023.pdf]. Levels above 7% degrade performance [Doping_Report_2024.docx]."
     def __init__(
         self,
         *,
@@ -119,9 +118,9 @@ title, year: url
 
         # Query external sources
         external_sources_json = await self.search_semantic_scholar(q)
-        external_sources_content = ""
+        external_sources_content = ''
         if len(external_sources_json != 0):
-            external_sources_content = ''
+            external_sources_content = self.format_external_content(external_sources_json)
 
 
 
@@ -171,6 +170,11 @@ title, year: url
                     [result.serialize_for_results() for result in results],
                 ),
                 ThoughtStep(
+                    "Semantic scholar results",
+                    [page for page in external_sources_json["data"] if "data" in external_sources_json]
+                )
+                ,
+                ThoughtStep(
                     "Prompt to generate answer",
                     updated_messages,
                     (
@@ -195,7 +199,7 @@ title, year: url
         base_url = "https://api.semanticscholar.org/graph/v1/paper/search"
         search_query = search_query.strip()
         if not search_query:
-            return []
+            return {}
         params = {
             "query": search_query,
             "fieldsOfStudy": ",".join(search_filters.get("fieldsOfStudy", [])),
@@ -210,4 +214,15 @@ title, year: url
                         await asyncio.sleep(10)  # Wait for 10 seconds before retrying
                         continue
                     else:  # Any other error status code
-                        return []
+                        return{}
+
+    def format_external_content(self, external_content_json: dict):
+        if "data" not in external_content_json:
+            return ""
+        
+        data = external_content_json["data"]
+        formatted_output = ""
+        for paper in data:
+            formatted_output += f"\n{paper['title']}, {paper['year']}:\n\t{paper['abstract'] + '\n' if 'abstract' in paper and paper['abstract'] is not None else ''}\tLink: [{paper['url'] if 'url' in paper else ''}]"
+
+        return formatted_output

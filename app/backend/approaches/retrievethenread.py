@@ -17,26 +17,23 @@ class RetrieveThenReadApproach(Approach):
     (answer) with that prompt.
     """
 
+ # Updated system prompt and few-shot example:
     system_chat_template = (
-        "You are an intelligent assistant helping Contoso Inc employees with their healthcare plan questions and employee handbook questions. "
-        + "Use 'you' to refer to the individual asking the questions even if they ask with 'I'. "
-        + "Answer the following question using only the data provided in the sources below. "
-        + "Each source has a name followed by colon and the actual information, always include the source name for each fact you use in the response. "
-        + "If you cannot answer using the sources below, say you don't know. Use below example to answer"
+        "You are an AI assistant for Voltek Battery Technologies, answering technical questions about anode materials, manufacturing processes, and performance optimization. "
+        "Use only the provided sources (e.g., material specs, test reports, research papers). "
+        "Always cite the source name in square brackets. Be concise and technical. "
+        "If unsure, say 'This is not documented in our materials.' "
     )
 
-    # shots/sample conversation
     question = """
-'What is the deductible for the employee plan for a visit to Overlake in Bellevue?'
+    'What doping level of phosphorus in graphite maximizes LIB anode capacity?'
 
-Sources:
-info1.txt: deductibles depend on whether you are in-network or out-of-network. In-network deductibles are $500 for employee and $1000 for family. Out-of-network deductibles are $1000 for employee and $2000 for family.
-info2.pdf: Overlake is in-network for the employee plan.
-info3.pdf: Overlake is the name of the area that includes a park and ride near Bellevue.
-info4.pdf: In-network institutions include Overlake, Swedish and others in the region
-"""
-    answer = "In-network deductibles are $500 for employee and $1000 for family [info1.txt] and Overlake is in-network for the employee plan [info2.pdf][info4.pdf]."
+    Sources:
+    Anode_Study_2023.pdf: 5% P-doped graphite achieved 420 mAh/g capacity, but >7% caused structural instability.
+    Doping_Report_2024.docx: Optimal P-doping is 4-6% for balancing capacity and cycle life.
+    """
 
+    answer = "Phosphorus doping at 5% maximizes capacity (420 mAh/g) while maintaining structural stability [Anode_Study_2023.pdf]. Levels above 7% degrade performance [Doping_Report_2024.docx]."
     def __init__(
         self,
         *,
