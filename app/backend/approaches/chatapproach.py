@@ -9,26 +9,28 @@ from approaches.approach import Approach
 
 
 class ChatApproach(Approach, ABC):
+    
+    # TODO: replace the second example by formulating a question, feeding it to some LLM
     query_prompt_few_shots: list[ChatCompletionMessageParam] = [
-        {"role": "user", "content": "How did crypto do last year?"},
-        {"role": "assistant", "content": "Summarize Cryptocurrency Market Dynamics from last year"},
-        {"role": "user", "content": "What are my health plans?"},
-        {"role": "assistant", "content": "Show available health plans"},
+        {"role": "user", "content":  "What doping level of phosphorus in graphite maximizes LIB anode capacity?"},
+        {"role": "assistant", "content": "phosphorus doping graphite LIB anode capacity"},
+        {"role": "user", "content": "How can we optimize electrode composition to improve energy density using AI models?"},
+        {"role": "assistant", "content": "Using AI to optimize electrode composition for higher energy density"},
     ]
     NO_RESPONSE = "0"
 
     follow_up_questions_prompt_content = """Generate 3 very brief follow-up questions that the user would likely ask next.
     Enclose the follow-up questions in double angle brackets. Example:
-    <<Are there exclusions for prescriptions?>>
-    <<Which pharmacies can be ordered from?>>
-    <<What is the limit for over-the-counter medication?>>
+    <<Are there any important material properties I need to be focusing on?>>
+    <<Which materials seem to be the most promising?>>
+    <<What is the best plasma coating anode manufacturing process?>>
     Do no repeat questions that have already been asked.
     Make sure the last question ends with ">>".
     """
 
     query_prompt_template = """Below is a history of the conversation so far, and a new question asked by the user that needs to be answered by searching in a knowledge base.
-    You have access to Azure AI Search index with 100's of documents.
-    Generate a search query based on the conversation and the new question.
+    You have access to Azure AI Search index with 100's of documents. You also have access to the semantic scholar API.
+    Generate a search query based on the conversation and the new question. The query must be concise enough to return relevant results from both the semantic scholar API and the search index.
     Do not include cited source filenames and document names e.g info.txt or doc.pdf in the search query terms.
     Do not include any text inside [] or <<>> in the search query terms.
     Do not include any special characters like '+'.

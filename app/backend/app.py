@@ -49,7 +49,7 @@ from quart import (
 from quart_cors import cors
 
 from approaches.approach import Approach
-from approaches.chatreadretrieveread import ChatReadRetrieveReadApproach
+from approaches.chatreadretrievereadsemantic import ChatReadRetrieveReadSemanticApproach
 from approaches.chatreadretrievereadvision import ChatReadRetrieveReadVisionApproach
 from approaches.retrievethenread import RetrieveThenReadApproach
 from approaches.retrievethenreadvision import RetrieveThenReadVisionApproach
@@ -80,6 +80,7 @@ from config import (
     CONFIG_USER_BLOB_CONTAINER_CLIENT,
     CONFIG_USER_UPLOAD_ENABLED,
     CONFIG_VECTOR_SEARCH_ENABLED,
+    BASE_GROUP,
 )
 from core.authentication import AuthenticationHelper
 from core.sessionhelper import create_session_id
@@ -151,9 +152,20 @@ async def content_file(path: str, auth_claims: Dict[str, Any]):
                 user_directory_client: FileSystemClient = user_blob_container_client.get_directory_client(user_oid)
                 file_client = user_directory_client.get_file_client(path)
                 blob = await file_client.download_file()
+                current_app.logger.info("Path not found in user Blob container: %s", path)
             except ResourceNotFoundError:
-                current_app.logger.exception("Path not found in DataLake: %s", path)
-                abort(404)
+                try: 
+                    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+                    groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
+                    group_id = groups[0]["id"]
+                    group_blob_container_client = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
+                    group_directory_client: FileSystemClient = group_blob_container_client.get_directory_client(group_id)
+                    file_client = group_directory_client.get_file_client(path)
+                    blob = await file_client.download_file()
+
+                except ResourceNotFoundError:
+                    current_app.logger.exception("Path not found in DataLake group container: %s", path)
+                    abort(404)
         else:
             abort(404)
     if not blob.properties or not blob.properties.has_key("content_settings"):
@@ -356,22 +368,26 @@ async def upload(auth_claims: dict[str, Any]):
 
     user_oid = auth_claims["oid"]
     file = request_files.getlist("file")[0]
+    group_name = current_app.config[BASE_GROUP]
+    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+    groups = await auth_helper.get_group_id(group_name)
+    group_id = groups[0]["id"]
     user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
-    user_directory_client = user_blob_container_client.get_directory_client(user_oid)
+    group_directory_client = user_blob_container_client.get_directory_client(group_id)
     try:
-        await user_directory_client.get_directory_properties()
+        await group_directory_client.get_directory_properties()
     except ResourceNotFoundError:
-        current_app.logger.info("Creating directory for user %s", user_oid)
-        await user_directory_client.create_directory()
-    await user_directory_client.set_access_control(owner=user_oid)
-    file_client = user_directory_client.get_file_client(file.filename)
+        current_app.logger.info("Creating directory for group %s", group_id)
+        await group_directory_client.create_directory()
+    await group_directory_client.set_access_control(group=group_id)
+    file_client = group_directory_client.get_file_client(file.filename)
     file_io = file
     file_io.name = file.filename
     file_io = io.BufferedReader(file_io)
     await file_client.upload_data(file_io, overwrite=True, metadata={"UploadedBy": user_oid})
     file_io.seek(0)
     ingester: UploadUserFileStrategy = current_app.config[CONFIG_INGESTER]
-    await ingester.add_file(File(content=file_io, acls={"oids": [user_oid]}, url=file_client.url))
+    await ingester.add_file(File(content=file_io, acls={"oids": [user_oid], "groups" : [group_id]}, url=file_client.url))
     return jsonify({"message": "File uploaded successfully"}), 200
 
 
@@ -381,10 +397,19 @@ async def delete_uploaded(auth_claims: dict[str, Any]):
     request_json = await request.get_json()
     filename = request_json.get("filename")
     user_oid = auth_claims["oid"]
-    user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
-    user_directory_client = user_blob_container_client.get_directory_client(user_oid)
-    file_client = user_directory_client.get_file_client(filename)
-    await file_client.delete_file()
+    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+    group_name = current_app.config[BASE_GROUP]
+    groups = await auth_helper.get_group_id(group_name)
+    group_id = groups[0]["id"]
+    blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
+    try: 
+        user_directory_client = blob_container_client.get_directory_client(user_oid)
+        file_client = user_directory_client.get_file_client(filename)
+        await file_client.delete_file()
+    except ResourceNotFoundError:
+        group_directory_client = blob_container_client.get_directory_client(group_id)
+        file_client = group_directory_client.get_file_client(filename)
+        await file_client.delete_file()
     ingester = current_app.config[CONFIG_INGESTER]
     await ingester.remove_file(filename, user_oid)
     return jsonify({"message": f"File {filename} deleted successfully"}), 200
@@ -395,14 +420,28 @@ async def delete_uploaded(auth_claims: dict[str, Any]):
 async def list_uploaded(auth_claims: dict[str, Any]):
     user_oid = auth_claims["oid"]
     user_blob_container_client: FileSystemClient = current_app.config[CONFIG_USER_BLOB_CONTAINER_CLIENT]
+    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
     files = []
+    
     try:
-        all_paths = user_blob_container_client.get_paths(path=user_oid)
-        async for path in all_paths:
+        all_user_paths = user_blob_container_client.get_paths(path=user_oid)
+        async for path in all_user_paths:
             files.append(path.name.split("/", 1)[1])
     except ResourceNotFoundError as error:
         if error.status_code != 404:
             current_app.logger.exception("Error listing uploaded files", error)
+
+    try:
+        groups = await auth_helper.get_group_id(current_app.config[BASE_GROUP])
+        group_id = groups[0]["id"]
+        all_group_paths = user_blob_container_client.get_paths(path=group_id)
+        async for path in all_group_paths:
+            files.append(path.name.split("/", 1)[1])
+            # current_app.logger.info(f"Path: {files}")
+    except ResourceNotFoundError as error:
+        if error.status_code != 404:
+            current_app.logger.exception("Error listing uploaded files", error)
+
     return jsonify(files), 200
 
 
@@ -465,6 +504,7 @@ async def setup_clients():
     USE_SPEECH_OUTPUT_AZURE = os.getenv("USE_SPEECH_OUTPUT_AZURE", "").lower() == "true"
     USE_CHAT_HISTORY_BROWSER = os.getenv("USE_CHAT_HISTORY_BROWSER", "").lower() == "true"
     USE_CHAT_HISTORY_COSMOS = os.getenv("USE_CHAT_HISTORY_COSMOS", "").lower() == "true"
+    base_group = os.getenv("BASE_GROUP")
 
     # WEBSITE_HOSTNAME is always set by App Service, RUNNING_IN_PRODUCTION is set in main.bicep
     RUNNING_ON_AZURE = os.getenv("WEBSITE_HOSTNAME") is not None or os.getenv("RUNNING_IN_PRODUCTION") is not None
@@ -631,6 +671,8 @@ async def setup_clients():
     current_app.config[CONFIG_BLOB_CONTAINER_CLIENT] = blob_container_client
     current_app.config[CONFIG_AUTH_CLIENT] = auth_helper
 
+    current_app.config[BASE_GROUP] = base_group
+
     current_app.config[CONFIG_GPT4V_DEPLOYED] = bool(USE_GPT4V)
     current_app.config[CONFIG_SEMANTIC_RANKER_DEPLOYED] = AZURE_SEARCH_SEMANTIC_RANKER != "disabled"
     current_app.config[CONFIG_VECTOR_SEARCH_ENABLED] = os.getenv("USE_VECTORS", "").lower() != "false"
@@ -659,7 +701,8 @@ async def setup_clients():
         query_speller=AZURE_SEARCH_QUERY_SPELLER,
     )
 
-    current_app.config[CONFIG_CHAT_APPROACH] = ChatReadRetrieveReadApproach(
+    # Changed to support semantic scholar query
+    current_app.config[CONFIG_CHAT_APPROACH] = ChatReadRetrieveReadSemanticApproach(
         search_client=search_client,
         openai_client=openai_client,
         auth_helper=auth_helper,
