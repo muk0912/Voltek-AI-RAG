@@ -49,7 +49,7 @@ from quart import (
 from quart_cors import cors
 
 from approaches.approach import Approach
-from approaches.chatreadretrievereadsemantic import ChatReadRetrieveReadSemanticApproach
+from approaches.chatreadretrieveread import ChatReadRetrieveReadApproach
 from approaches.chatreadretrievereadvision import ChatReadRetrieveReadVisionApproach
 from approaches.retrievethenread import RetrieveThenReadApproach
 from approaches.retrievethenreadvision import RetrieveThenReadVisionApproach
@@ -702,7 +702,7 @@ async def setup_clients():
     )
 
     # Changed to support semantic scholar query
-    current_app.config[CONFIG_CHAT_APPROACH] = ChatReadRetrieveReadSemanticApproach(
+    current_app.config[CONFIG_CHAT_APPROACH] = ChatReadRetrieveReadApproach(
         search_client=search_client,
         openai_client=openai_client,
         auth_helper=auth_helper,
