@@ -37,9 +37,9 @@
     "chatEmptyStateTitle": "Chat with your data",
     "chatEmptyStateSubtitle": "Ask anything or try an example",
     "defaultExamples": {
-        "1": "What size and distribution of graphite particles are required for long-life battery anode operation by lithium-ion anode?",
-        "2": "What thickness of thin film coatings is best to restrain and minimize the formation of solid electrolyte interfaces on graphite?",
-        "3": "What thickness of thin film coatings is best to restrain and minimize the formation of solid electrolyte interfaces on graphite?",
+        "1": "How does cell aging affect the quality of electrodes?",
+        "2": "What size and distribution of graphite particles are required for long-life battery anode operation by lithium-ion anode?",
+        "3": "What is the significance of super-critical fluids in extracting battery components?",
         "placeholder": "Type a new question"
     },
     "askTitle": "Ask your data",
