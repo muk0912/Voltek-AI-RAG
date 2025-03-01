@@ -17,10 +17,12 @@ class RetrieveThenReadApproach(Approach):
     (answer) with that prompt.
     """
 
+    # Updated system prompt and few-shot example:
     system_chat_template = (
-        "You are a research assistant helping Nanoloy employees with the knowledge base and answering questions contained in said knowledge base."
+        "You are a research assistant helping Nanoloy and Voltek Battery Technologies' employees with their knowledge base and answering questions contained in said knowledge base."
         + "Use 'you' to refer to the individual asking the questions even if they ask with 'I'. "
         + "Answer the following question using only the data provided in the sources below. "
+        + "BE TECHNICAL."
         + "Each source has a name followed by colon and the actual information, always include the source name for each fact you use in the response. "
         + "If you cannot answer using the sources below, say you don't know. Use the below example to answer."
     )
