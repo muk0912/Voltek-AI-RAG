@@ -18,24 +18,24 @@ class RetrieveThenReadApproach(Approach):
     """
 
     system_chat_template = (
-        "You are an intelligent assistant helping Contoso Inc employees with their healthcare plan questions and employee handbook questions. "
+        "You are a research assistant helping Nanoloy employees with the knowledge base and answering questions contained in said knowledge base."
         + "Use 'you' to refer to the individual asking the questions even if they ask with 'I'. "
         + "Answer the following question using only the data provided in the sources below. "
         + "Each source has a name followed by colon and the actual information, always include the source name for each fact you use in the response. "
-        + "If you cannot answer using the sources below, say you don't know. Use below example to answer"
+        + "If you cannot answer using the sources below, say you don't know. Use the below example to answer."
     )
 
     # shots/sample conversation
-    question = """
-'What is the deductible for the employee plan for a visit to Overlake in Bellevue?'
+    question = r"""
+'What energy density improvements do silicon-based anodes offer compared to traditional graphite, and what evidence supports the Overlake composite as a promising candidate for next-generation applications?'
 
 Sources:
-info1.txt: deductibles depend on whether you are in-network or out-of-network. In-network deductibles are $500 for employee and $1000 for family. Out-of-network deductibles are $1000 for employee and $2000 for family.
-info2.pdf: Overlake is in-network for the employee plan.
-info3.pdf: Overlake is the name of the area that includes a park and ride near Bellevue.
-info4.pdf: In-network institutions include Overlake, Swedish and others in the region
+info1.txt: Silicon-based anodes deliver approximately a 15% improvement in energy density compared to conventional graphite.
+info2.pdf: Recent lab evaluations show that the Overlake composite is emerging as a leading candidate for next-generation anode applications.
+info3.pdf: Overlake is recognized for its pioneering research in advanced battery materials.
+info4.pdf: Leading institutions, including Overlake and Swedish, are at the forefront of anode material innovation.
 """
-    answer = "In-network deductibles are $500 for employee and $1000 for family [info1.txt] and Overlake is in-network for the employee plan [info2.pdf][info4.pdf]."
+    answer = r"Silicon-based anodes offer about a 15% energy density boost [info1.txt] and the Overlake composite is a promising candidate for next-generation applications [info2.pdf][info4.pdf]."
 
     def __init__(
         self,

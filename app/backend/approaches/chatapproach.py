@@ -10,19 +10,26 @@ from approaches.approach import Approach
 
 class ChatApproach(Approach, ABC):
     query_prompt_few_shots: list[ChatCompletionMessageParam] = [
-        {"role": "user", "content": "How did crypto do last year?"},
-        {"role": "assistant", "content": "Summarize Cryptocurrency Market Dynamics from last year"},
-        {"role": "user", "content": "What are my health plans?"},
-        {"role": "assistant", "content": "Show available health plans"},
+        {"role": "assistant", "content": "Which journals lead in anode material research?"},
+        {"role": "user", "content": "What are the latest developments in battery technology?"},
+        {
+            "role": "assistant",
+            "content": "Discuss recent advancements in battery materials and sustainability efforts.",
+        },
+        {
+            "role": "user",
+            "content": "What size and distribution of graphite particles are required for long-life battery anode operation by lithium-ion anode?",
+        },
+        {"role": "user", "content": "What are the environmental impacts of lithium extraction?"},
     ]
     NO_RESPONSE = "0"
 
     follow_up_questions_prompt_content = """Generate 3 very brief follow-up questions that the user would likely ask next.
     Enclose the follow-up questions in double angle brackets. Example:
-    <<Are there exclusions for prescriptions?>>
-    <<Which pharmacies can be ordered from?>>
-    <<What is the limit for over-the-counter medication?>>
-    Do no repeat questions that have already been asked.
+    <<Which novel anode materials are emerging?>>
+    <<What are the key cost challenges in large-scale synthesis?>>
+    <<How do temperature fluctuations impact cycle life?>>
+    Do not repeat questions that have already been asked.
     Make sure the last question ends with ">>".
     """
 
